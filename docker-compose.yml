@@ -1,0 +1,139 @@
+version: "3.7"
+services:
+  # |**************************************|
+  # |------------ Server NGINX ------------|
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    volumes:
+      - ./config/nginx/conf.d/:/etc/nginx/conf.d
+      - ./config/nginx/ssl/:/etc/nginx/ssl
+      # - ./config/nginx/proxy_params:/etc/nginx/proxy_params
+      - ${PROJECT_DIR}:/var/www
+    ports:
+      - "80:80"
+      - "443:443"
+    links:
+      - front
+      - back
+      - api
+
+
+  # |*********************************************|
+  # |------------ Server NodeJS (Front) ------------|
+  front:
+    container_name: front
+    build:
+      context: ./config/nodejs/16
+    tty: true
+    working_dir: /opt/server
+    volumes:
+      - ${PROJECT_DIR}:/opt/server
+    env_file:
+      - .env
+    expose:
+      - '3000'
+
+
+  # |*********************************************|
+  # |------------ Server NodeJS (Back) ------------|
+  back:
+    container_name: back
+    build:
+      context: ./config/nodejs/16
+    tty: true
+    working_dir: /opt/server
+    volumes:
+      - ${PROJECT_DIR}:/opt/server
+    env_file:
+      - .env
+    expose:
+      - '3001'
+
+  # |*********************************************|
+  # |------------ Server NodeJS (API) ------------|
+  api:
+    container_name: api
+    build:
+      context: ./config/nodejs/16
+    tty: true
+    working_dir: /opt/server
+    volumes:
+      - ${PROJECT_DIR}:/opt/server
+    env_file:
+      - .env
+    expose:
+      - '3002'
+
+  # |**************************************************|
+  # |------------ Server DataBase Postgres ------------|
+  postgres:
+    container_name: postgres
+    build:
+      context: ./config/postgres/12
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data/pgdata
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+
+
+  # |***********************************************|
+  # |------------ Server Minio (AWS S3) ------------|
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    environment:
+      # MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      # MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    volumes:
+      - ./data/minio:/data
+    ports:
+      - 9000:9000
+      - 9001:9001
+
+
+  # |***********************************************|
+  # |------------ Server DataBase MySQL ------------|
+  # mysql8:
+  #   container_name: mysql8
+  #   image: mysql:8.0
+  #   volumes:
+  #     - ./data/mysql8:/var/lib/mysql
+  #     - ./config/mysql/8/my.cnf:/root/.my.cnf:ro
+  #   ports:
+  #     - "3306:3306"
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
+
+  # |**************************************************|
+  # |------------ Server DataBase MongoDB -------------|
+  # mongodb:
+  #   image: mongo:4.2.3
+  #   container_name: mongodb
+  #   restart: always
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: admin
+  #     MONGO_INITDB_ROOT_PASSWORD: admin
+  #   volumes:
+  #     - ./data/mongodb:/data/db
+  #     - ${PROJECT_DIR}:/www
+  #   ports:
+  #     - '27017-27019:27017-27019'
+
+
+  # |**************************************|
+  # |------------ Server Redis ------------|
+  # redis:
+  #   image: redis
+  #   container_name: redis
+  #   volumes:
+  #     - ./data/redis:/data
+  #   ports:
+  #     - "6379:6379"
